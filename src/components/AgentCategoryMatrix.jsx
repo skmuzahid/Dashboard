@@ -231,6 +231,17 @@ export default function AgentCategoryMatrix({ data, targets, selectedMonth, grou
                             </span>
                           </div>
                         ))}
+                        {(() => {
+                          const totalProfit = Object.values(agentGroups).reduce((s, g) => s + g.profit, 0);
+                          return (
+                            <div className="border-t border-gray-700 mt-1.5 pt-1 flex justify-between text-xs">
+                              <span className="text-gray-400">Total</span>
+                              <span className={`font-semibold tabular-nums ${totalProfit < 0 ? "text-rose-400" : "text-emerald-400"}`}>
+                                AED {fmt(totalProfit)}
+                              </span>
+                            </div>
+                          );
+                        })()}
 
                         <div className="border-t border-gray-700 my-2" />
 

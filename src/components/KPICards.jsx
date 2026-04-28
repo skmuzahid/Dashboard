@@ -47,7 +47,7 @@ const cards = [
     value: (k) => k.topAgent?.name || "–",
     sub: (k) =>
       k.topAgent
-        ? `AED ${fmt(k.topAgent.profit)} · ${k.topAgent.sales} sales`
+        ? `AED ${fmt(k.topAgent.revenue)} revenue · ${k.topAgent.sales} sales`
         : "",
     valueClass: "text-emerald-400",
   },

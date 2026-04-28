@@ -116,7 +116,7 @@ export function processData(rawData, selectedMonth) {
   const margin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
   const salesCount = deals.length;
   const lossSales = deals.filter((d) => d.profit < 0);
-  const lossRevenue = lossSales.reduce((s, d) => s + d.revenue, 0);
+  const lossRevenue = Math.abs(lossSales.reduce((s, d) => s + d.profit, 0));
 
   /* ─── Agent aggregation ─── */
   const agentMap = {};
@@ -136,7 +136,7 @@ export function processData(rawData, selectedMonth) {
       revenue: Math.round(d.revenue),
       margin: d.revenue > 0 ? Math.round((d.profit / d.revenue) * 100) : 0,
     }))
-    .sort((a, b) => b.profit - a.profit);
+    .sort((a, b) => b.revenue - a.revenue);
 
   const topAgent = agentLeaderboard[0] || null;
 
@@ -274,7 +274,7 @@ export function processData(rawData, selectedMonth) {
           ? ((lossRevenue / totalRevenue) * 100).toFixed(1)
           : "0",
       topAgent: topAgent
-        ? { name: topAgent.name, profit: topAgent.profit, sales: topAgent.sales }
+        ? { name: topAgent.name, revenue: topAgent.revenue, profit: topAgent.profit, sales: topAgent.sales }
         : null,
       uniqueAgents,
       categoryCount: categories.length,
