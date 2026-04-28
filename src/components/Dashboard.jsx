@@ -66,12 +66,52 @@ export default function Dashboard({ user }) {
     []
   );
 
+  const months = data?.months || [];
+
+  /* Parse "Month - YYYY" → Date for chronological sorting */
+  const parseMonth = (m) => {
+    const [monthName, year] = m.split(" - ");
+    return new Date(`${monthName} 1, ${year}`);
+  };
+
+  /* Parse targets from env var */
+  const targets = useMemo(() => {
+    try {
+      return JSON.parse(process.env.NEXT_PUBLIC_TARGETS || "{}");
+    } catch { return {}; }
+  }, []);
+
+  /* Derive latest 2 months for quick tabs */
+  const latestMonths = useMemo(() => {
+    if (months.length === 0) return [];
+    const sorted = [...months].sort((a, b) => parseMonth(b) - parseMonth(a));
+    return sorted.slice(0, 2).reverse();
+  }, [months]);
+
+  /* Range filter definitions */
+  const RANGE_FILTERS = [
+    { key: "Last3M", label: "3M" },
+    { key: "Last6M", label: "6M" },
+    { key: "Last1Y", label: "1Y" },
+  ];
+
+  /* Resolve range keys into month arrays */
+  const resolvedMonth = useMemo(() => {
+    if (selectedMonth === "All" || !selectedMonth) return "All";
+    const rangeMonthCounts = { Last3M: 3, Last6M: 6, Last1Y: 12 };
+    const count = rangeMonthCounts[selectedMonth];
+    if (!count || months.length === 0) return selectedMonth;
+
+    const sorted = [...months].sort((a, b) => parseMonth(b) - parseMonth(a));
+    return sorted.slice(0, count);
+  }, [selectedMonth, months]);
+
   /* Reprocess whenever rawData or selectedMonth changes (instant, no fetch) */
   useEffect(() => {
     if (rawData) {
-      setData(processData(rawData, selectedMonth));
+      setData(processData(rawData, resolvedMonth));
     }
-  }, [rawData, selectedMonth]);
+  }, [rawData, resolvedMonth]);
 
   /* Initial load */
   useEffect(() => {
@@ -86,29 +126,6 @@ export default function Dashboard({ user }) {
     const id = setInterval(fetchData, autoRefresh * 60 * 1000);
     return () => clearInterval(id);
   }, [autoRefresh, fetchData]);
-
-  const months = data?.months || [];
-
-  /* Parse targets from env var */
-  const targets = useMemo(() => {
-    try {
-      return JSON.parse(process.env.NEXT_PUBLIC_TARGETS || "{}");
-    } catch { return {}; }
-  }, []);
-
-  /* Derive latest 2 months for quick tabs */
-  const latestMonths = useMemo(() => {
-    if (months.length === 0) return [];
-    /* Sort months chronologically (format "Month - YYYY") */
-    const sorted = [...months].sort((a, b) => {
-      const parse = (m) => {
-        const [monthName, year] = m.split(" - ");
-        return new Date(`${monthName} 1, ${year}`);
-      };
-      return parse(b) - parse(a);
-    });
-    return sorted.slice(0, 2).reverse();
-  }, [months]);
 
   /* Month dropdown open state */
   const [monthDropdownOpen, setMonthDropdownOpen] = useState(false);
@@ -130,7 +147,7 @@ export default function Dashboard({ user }) {
               ✦ Dark Blue · Consumer Sales
             </span>
 
-            {/* Quick tabs: All + latest 2 months */}
+            {/* Quick tabs: All + ranges + latest 2 months */}
             <div className="flex items-center gap-1 ml-2">
               <button
                 onClick={() => setSelectedMonth("All")}
@@ -142,6 +159,20 @@ export default function Dashboard({ user }) {
               >
                 All
               </button>
+              {RANGE_FILTERS.map((rf) => (
+                <button
+                  key={rf.key}
+                  onClick={() => setSelectedMonth(rf.key)}
+                  className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+                    selectedMonth === rf.key
+                      ? "bg-gray-700 text-white"
+                      : "text-gray-400 hover:text-white hover:bg-gray-800"
+                  }`}
+                >
+                  {rf.label}
+                </button>
+              ))}
+              <span className="w-px h-4 bg-gray-700 mx-1" />
               {latestMonths.map((m) => (
                 <button
                   key={m}
@@ -166,7 +197,7 @@ export default function Dashboard({ user }) {
                 className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-xs text-gray-300 hover:bg-gray-700 transition-colors flex items-center gap-1.5"
               >
                 <span>📅</span>
-                {selectedMonth === "All" ? "All Months" : shortMonth(selectedMonth)}
+                {selectedMonth === "All" ? "All Months" : RANGE_FILTERS.find(r => r.key === selectedMonth) ? RANGE_FILTERS.find(r => r.key === selectedMonth).label : shortMonth(selectedMonth)}
                 <span className="text-[10px] ml-0.5">▾</span>
               </button>
               {monthDropdownOpen && (
@@ -317,7 +348,7 @@ export default function Dashboard({ user }) {
                 <TargetAchievement
                   groupAchieved={data.groupAchieved}
                   targets={targets}
-                  selectedMonth={selectedMonth}
+                  selectedMonth={resolvedMonth}
                 />
               </div>
             </div>
@@ -326,13 +357,13 @@ export default function Dashboard({ user }) {
             <AgentCategoryMatrix
               data={data.agentCategoryMatrix}
               targets={targets}
-              selectedMonth={selectedMonth}
+              selectedMonth={resolvedMonth}
               groupAchieved={data.groupAchieved}
             />
 
-            {/* Deal ledger */}
+            {/* Sales ledger */}
             <DealLedger
-              deals={data.dealLedger}
+              sales={data.salesLedger}
               categories={data.categories}
             />
           </>

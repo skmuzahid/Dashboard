@@ -53,7 +53,7 @@ export default function AgentCategoryMatrix({ data, targets, selectedMonth, grou
 
   if (!data || !data.agents || data.agents.length === 0) return null;
 
-  const { agents, categories, data: matrix, profitData, dealData, agentGroupData } = data;
+  const { agents, categories, data: matrix, profitData, salesData, agentGroupData } = data;
 
   /* find max value for heat-map intensity */
   let maxVal = 0;
@@ -88,20 +88,23 @@ export default function AgentCategoryMatrix({ data, targets, selectedMonth, grou
   /* Resolve month target for contribution % calculation */
   const monthTarget = useMemo(() => {
     if (!targets) return {};
-    if (selectedMonth !== "All") return targets[selectedMonth] || {};
+    if (selectedMonth !== "All" && !Array.isArray(selectedMonth)) return targets[selectedMonth] || {};
+    const monthKeys = Array.isArray(selectedMonth) ? selectedMonth : Object.keys(targets);
     const summed = {};
-    Object.values(targets).forEach((mt) => {
+    monthKeys.forEach((mk) => {
+      const mt = targets[mk];
+      if (!mt) return;
       Object.entries(mt).forEach(([gk, gv]) => {
-        if (!summed[gk]) summed[gk] = { deals: 0, revenue: 0 };
-        summed[gk].deals += gv.deals || 0;
+        if (!summed[gk]) summed[gk] = { sales: 0, revenue: 0 };
+        summed[gk].sales += gv.sales || 0;
         summed[gk].revenue += gv.revenue || 0;
       });
     });
     return summed;
   }, [targets, selectedMonth]);
 
-  /* Total target deals & revenue across all groups */
-  const totalTargetDeals = Object.values(monthTarget).reduce((s, g) => s + (g.deals || 0), 0);
+  /* Total target sales & revenue across all groups */
+  const totalTargetSales = Object.values(monthTarget).reduce((s, g) => s + (g.sales || 0), 0);
   const totalTargetRevenue = Object.values(monthTarget).reduce((s, g) => s + (g.revenue || 0), 0);
 
   return (
@@ -140,11 +143,11 @@ export default function AgentCategoryMatrix({ data, targets, selectedMonth, grou
             {sortedAgents.map((agent, idx) => {
               const totalRev = agentTotals[agent];
               const agentGroups = agentGroupData?.[agent] || {};
-              const agentDealTotal = Object.values(dealData?.[agent] || {}).reduce((s, v) => s + v, 0);
+              const agentSalesTotal = Object.values(salesData?.[agent] || {}).reduce((s, v) => s + v, 0);
 
               /* contribution % */
-              const salesContrib = totalTargetDeals > 0
-                ? Math.round((agentDealTotal / totalTargetDeals) * 100)
+              const salesContrib = totalTargetSales > 0
+                ? Math.round((agentSalesTotal / totalTargetSales) * 100)
                 : 0;
               const revenueContrib = totalTargetRevenue > 0
                 ? Math.round((totalRev / totalTargetRevenue) * 100)
@@ -201,7 +204,7 @@ export default function AgentCategoryMatrix({ data, targets, selectedMonth, grou
                         {Object.entries(agentGroups).map(([gk, gv]) => (
                           <div key={gk} className="flex justify-between text-xs mb-0.5">
                             <span className="text-gray-300">{gv.label}</span>
-                            <span className="text-white font-medium tabular-nums">{gv.deals}</span>
+                            <span className="text-white font-medium tabular-nums">{gv.sales}</span>
                           </div>
                         ))}
 

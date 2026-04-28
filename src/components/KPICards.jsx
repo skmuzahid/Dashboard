@@ -8,7 +8,7 @@ const cards = [
     label: "REVENUE",
     icon: "💰",
     value: (k) => `AED ${fmt(k.revenue)}`,
-    sub: (k) => `${(k.revenue / 1000).toFixed(1)}K across ${k.deals} deals`,
+    sub: (k) => `${(k.revenue / 1000).toFixed(1)}K across ${k.sales} sales`,
   },
   {
     key: "profit",
@@ -26,18 +26,18 @@ const cards = [
     sub: () => "profit ÷ revenue",
   },
   {
-    key: "deals",
-    label: "DEALS",
+    key: "sales",
+    label: "SALES",
     icon: "📊",
-    value: (k) => k.deals,
+    value: (k) => k.sales,
     sub: (k) => `${k.uniqueAgents} agents · ${k.categoryCount} categories`,
   },
   {
     key: "loss",
-    label: "LOSS DEALS",
+    label: "LOSS REVENUE",
     icon: "📉",
-    value: (k) => k.lossDeals,
-    sub: (k) => `${k.lossPercent}% of all deals`,
+    value: (k) => `AED ${fmt(k.lossRevenue)}`,
+    sub: (k) => `${k.lossPercent}% of total revenue`,
     valueClass: "text-rose-400",
   },
   {
@@ -47,7 +47,7 @@ const cards = [
     value: (k) => k.topAgent?.name || "–",
     sub: (k) =>
       k.topAgent
-        ? `AED ${fmt(k.topAgent.profit)} · ${k.topAgent.deals} deals`
+        ? `AED ${fmt(k.topAgent.profit)} · ${k.topAgent.sales} sales`
         : "",
     valueClass: "text-emerald-400",
   },

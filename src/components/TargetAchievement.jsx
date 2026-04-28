@@ -12,21 +12,25 @@ const GROUP_COLORS = {
 const GROUP_ORDER = ["P2P", "HomeWireless", "InzoneFiber"];
 
 export default function TargetAchievement({ groupAchieved, targets, selectedMonth }) {
-  const [hovered, setHovered] = useState(null); // { groupKey, type: "deals"|"revenue" }
+  const [hovered, setHovered] = useState(null); // { groupKey, type: "sales"|"revenue" }
 
   /* Resolve target for the selected month.
-     When "All" is selected, sum targets across all months in the env. */
+     When "All" is selected, sum targets across all months in the env.
+     When an array of months is passed (range filter), sum those months. */
   const monthTarget = useMemo(() => {
     if (!targets) return {};
-    if (selectedMonth !== "All") {
+    if (selectedMonth !== "All" && !Array.isArray(selectedMonth)) {
       return targets[selectedMonth] || {};
     }
-    /* "All" → sum all month targets */
+    /* "All" or array → sum relevant month targets */
+    const monthKeys = Array.isArray(selectedMonth) ? selectedMonth : Object.keys(targets);
     const summed = {};
-    Object.values(targets).forEach((mt) => {
+    monthKeys.forEach((mk) => {
+      const mt = targets[mk];
+      if (!mt) return;
       Object.entries(mt).forEach(([gk, gv]) => {
-        if (!summed[gk]) summed[gk] = { deals: 0, revenue: 0 };
-        summed[gk].deals += gv.deals || 0;
+        if (!summed[gk]) summed[gk] = { sales: 0, revenue: 0 };
+        summed[gk].sales += gv.sales || 0;
         summed[gk].revenue += gv.revenue || 0;
       });
     });
@@ -58,7 +62,7 @@ export default function TargetAchievement({ groupAchieved, targets, selectedMont
       {/* Header row */}
       <div className="grid grid-cols-[1fr_1fr_1fr] gap-2 mb-2 px-1">
         <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Group</span>
-        <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-center">Deals</span>
+        <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-center">Sales</span>
         <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-center">Revenue</span>
       </div>
 
@@ -66,7 +70,7 @@ export default function TargetAchievement({ groupAchieved, targets, selectedMont
         {GROUP_ORDER.map((gk) => {
           const achieved = groupAchieved[gk];
           if (!achieved) return null;
-          const target = monthTarget[gk] || { deals: 0, revenue: 0 };
+          const target = monthTarget[gk] || { sales: 0, revenue: 0 };
           const color = GROUP_COLORS[gk];
 
           return (
@@ -78,42 +82,42 @@ export default function TargetAchievement({ groupAchieved, targets, selectedMont
                   <span className="text-white text-sm font-medium leading-tight">{achieved.label}</span>
                 </div>
 
-                {/* Deals achieved */}
+                {/* Sales achieved */}
                 <div
                   className="relative text-center cursor-pointer"
-                  onMouseEnter={() => setHovered({ groupKey: gk, type: "deals" })}
+                  onMouseEnter={() => setHovered({ groupKey: gk, type: "sales" })}
                   onMouseLeave={() => setHovered(null)}
                 >
                   <div className="text-white text-sm font-semibold tabular-nums">
-                    {achieved.deals}
-                    <span className="text-gray-500 font-normal"> / {target.deals || "—"}</span>
+                    {achieved.sales}
+                    <span className="text-gray-500 font-normal"> / {target.sales || "—"}</span>
                   </div>
                   <div className="w-full bg-gray-700 rounded-full h-1.5 mt-1">
                     <div
                       className="h-1.5 rounded-full transition-all"
                       style={{
-                        width: `${barWidth(achieved.deals, target.deals)}%`,
-                        backgroundColor: pct(achieved.deals, target.deals) >= 100 ? "#10b981" : color,
+                        width: `${barWidth(achieved.sales, target.sales)}%`,
+                        backgroundColor: pct(achieved.sales, target.sales) >= 100 ? "#10b981" : color,
                       }}
                     />
                   </div>
-                  <span className={`text-[10px] font-medium ${pct(achieved.deals, target.deals) >= 100 ? "text-emerald-400" : "text-gray-400"}`}>
-                    {target.deals ? `${pct(achieved.deals, target.deals)}%` : "—"}
+                  <span className={`text-[10px] font-medium ${pct(achieved.sales, target.sales) >= 100 ? "text-emerald-400" : "text-gray-400"}`}>
+                    {target.sales ? `${pct(achieved.sales, target.sales)}%` : "—"}
                   </span>
 
                   {/* Tooltip */}
-                  {hovered?.groupKey === gk && hovered?.type === "deals" && (
+                  {hovered?.groupKey === gk && hovered?.type === "sales" && (
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 bg-gray-900 border border-gray-700 rounded-lg shadow-xl p-3 min-w-[160px] text-left">
-                      <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold mb-1.5">Deals Breakdown</p>
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold mb-1.5">Sales Breakdown</p>
                       {Object.entries(achieved.subCategories || {}).map(([cat, d]) => (
                         <div key={cat} className="flex justify-between text-xs mb-0.5">
                           <span className="text-gray-300">{cat}</span>
-                          <span className="text-white font-medium tabular-nums">{d.deals}</span>
+                          <span className="text-white font-medium tabular-nums">{d.sales}</span>
                         </div>
                       ))}
                       <div className="border-t border-gray-700 mt-1.5 pt-1 flex justify-between text-xs">
                         <span className="text-gray-400">Total</span>
-                        <span className="text-white font-semibold">{achieved.deals}</span>
+                        <span className="text-white font-semibold">{achieved.sales}</span>
                       </div>
                     </div>
                   )}

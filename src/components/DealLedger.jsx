@@ -3,7 +3,7 @@ import { useState, useMemo } from "react";
 
 const fmt = (n) => Number(n).toLocaleString();
 
-export default function DealLedger({ deals, categories }) {
+export default function DealLedger({ sales, categories }) {
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState("All");
   const [lossOnly, setLossOnly] = useState(false);
@@ -11,7 +11,7 @@ export default function DealLedger({ deals, categories }) {
   const [sortDir, setSortDir] = useState("desc");
 
   const filtered = useMemo(() => {
-    let rows = deals || [];
+    let rows = sales || [];
 
     /* search */
     if (search.trim()) {
@@ -46,7 +46,7 @@ export default function DealLedger({ deals, categories }) {
     });
 
     return rows;
-  }, [deals, search, catFilter, lossOnly, sortCol, sortDir]);
+  }, [sales, search, catFilter, lossOnly, sortCol, sortDir]);
 
   function toggleSort(col) {
     if (sortCol === col) {
@@ -75,9 +75,9 @@ export default function DealLedger({ deals, categories }) {
         <div className="flex items-center gap-2">
           <span className="text-lg">📋</span>
           <div>
-            <h3 className="text-white font-semibold text-lg">Deal ledger</h3>
+            <h3 className="text-white font-semibold text-lg">Sales ledger</h3>
             <p className="text-gray-500 text-sm">
-              {filtered.length} of {(deals || []).length} deals shown. Click
+              {filtered.length} of {(sales || []).length} sales shown. Click
               column headers to sort.
             </p>
           </div>
@@ -179,7 +179,7 @@ export default function DealLedger({ deals, categories }) {
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={6} className="py-12 text-center text-gray-500">
-                  No deals match your filters.
+                  No sales match your filters.
                 </td>
               </tr>
             )}

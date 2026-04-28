@@ -84,11 +84,13 @@ export function processData(rawData, selectedMonth) {
   });
   const months = [...monthSet];
 
-  /* filter by selected month */
+  /* filter by selected month (string, "All", or array of months) */
   const filtered =
     selectedMonth === "All"
       ? data
-      : data.filter((row) => normalizeMonth(row.Month) === selectedMonth);
+      : Array.isArray(selectedMonth)
+        ? data.filter((row) => selectedMonth.includes(normalizeMonth(row.Month)))
+        : data.filter((row) => normalizeMonth(row.Month) === selectedMonth);
 
   /* build deal objects */
   const deals = filtered.map((row) => ({
@@ -112,15 +114,16 @@ export function processData(rawData, selectedMonth) {
   const totalRevenue = deals.reduce((s, d) => s + d.revenue, 0);
   const totalProfit = deals.reduce((s, d) => s + d.profit, 0);
   const margin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
-  const dealCount = deals.length;
-  const lossDeals = deals.filter((d) => d.profit < 0).length;
+  const salesCount = deals.length;
+  const lossSales = deals.filter((d) => d.profit < 0);
+  const lossRevenue = lossSales.reduce((s, d) => s + d.revenue, 0);
 
   /* ─── Agent aggregation ─── */
   const agentMap = {};
   deals.forEach((d) => {
     if (!agentMap[d.agent])
-      agentMap[d.agent] = { deals: 0, profit: 0, revenue: 0 };
-    agentMap[d.agent].deals++;
+      agentMap[d.agent] = { sales: 0, profit: 0, revenue: 0 };
+    agentMap[d.agent].sales++;
     agentMap[d.agent].profit += d.profit;
     agentMap[d.agent].revenue += d.revenue;
   });
@@ -128,7 +131,7 @@ export function processData(rawData, selectedMonth) {
   const agentLeaderboard = Object.entries(agentMap)
     .map(([name, d]) => ({
       name,
-      deals: d.deals,
+      sales: d.sales,
       profit: Math.round(d.profit),
       revenue: Math.round(d.revenue),
       margin: d.revenue > 0 ? Math.round((d.profit / d.revenue) * 100) : 0,
@@ -197,29 +200,29 @@ export function processData(rawData, selectedMonth) {
     });
   });
 
-  /* ─── Agent deal counts per category ─── */
-  const matrixDealData = {};
+  /* ─── Agent sales counts per category ─── */
+  const matrixSalesData = {};
   deals.forEach((d) => {
-    if (!matrixDealData[d.agent]) matrixDealData[d.agent] = {};
-    if (!matrixDealData[d.agent][d.category]) matrixDealData[d.agent][d.category] = 0;
-    matrixDealData[d.agent][d.category]++;
+    if (!matrixSalesData[d.agent]) matrixSalesData[d.agent] = {};
+    if (!matrixSalesData[d.agent][d.category]) matrixSalesData[d.agent][d.category] = 0;
+    matrixSalesData[d.agent][d.category]++;
   });
 
-  /* ─── Category Group aggregation from deals ─── */
+  /* ─── Category Group aggregation from sales ─── */
   const groupAchieved = {};
   Object.entries(CATEGORY_GROUPS).forEach(([groupKey, cats]) => {
-    let groupDeals = 0;
+    let groupSales = 0;
     let groupRevenue = 0;
     let groupProfit = 0;
     const subCategories = {};
     cats.forEach((cat) => {
       const catData = categoryMap[cat];
       if (catData) {
-        groupDeals += catData.count;
+        groupSales += catData.count;
         groupRevenue += catData.revenue;
         groupProfit += catData.profit;
         subCategories[cat] = {
-          deals: catData.count,
+          sales: catData.count,
           revenue: Math.round(catData.revenue),
           profit: Math.round(catData.profit),
         };
@@ -227,7 +230,7 @@ export function processData(rawData, selectedMonth) {
     });
     groupAchieved[groupKey] = {
       label: GROUP_LABELS[groupKey],
-      deals: groupDeals,
+      sales: groupSales,
       revenue: Math.round(groupRevenue),
       profit: Math.round(groupProfit),
       subCategories,
@@ -239,15 +242,15 @@ export function processData(rawData, selectedMonth) {
   agentLeaderboard.forEach((a) => {
     agentGroupData[a.name] = {};
     Object.entries(CATEGORY_GROUPS).forEach(([groupKey, cats]) => {
-      let gDeals = 0, gRevenue = 0, gProfit = 0;
+      let gSales = 0, gRevenue = 0, gProfit = 0;
       cats.forEach((cat) => {
-        gDeals += matrixDealData[a.name]?.[cat] || 0;
+        gSales += matrixSalesData[a.name]?.[cat] || 0;
         gRevenue += matrixData[a.name]?.[cat] || 0;
         gProfit += matrixProfitData[a.name]?.[cat] || 0;
       });
       agentGroupData[a.name][groupKey] = {
         label: GROUP_LABELS[groupKey],
-        deals: gDeals,
+        sales: gSales,
         revenue: gRevenue,
         profit: gProfit,
       };
@@ -264,14 +267,14 @@ export function processData(rawData, selectedMonth) {
       revenue: Math.round(totalRevenue),
       profit: Math.round(totalProfit),
       margin: margin.toFixed(1),
-      deals: dealCount,
-      lossDeals,
+      sales: salesCount,
+      lossRevenue: Math.round(lossRevenue),
       lossPercent:
-        dealCount > 0
-          ? ((lossDeals / dealCount) * 100).toFixed(1)
+        totalRevenue > 0
+          ? ((lossRevenue / totalRevenue) * 100).toFixed(1)
           : "0",
       topAgent: topAgent
-        ? { name: topAgent.name, profit: topAgent.profit, deals: topAgent.deals }
+        ? { name: topAgent.name, profit: topAgent.profit, sales: topAgent.sales }
         : null,
       uniqueAgents,
       categoryCount: categories.length,
@@ -284,11 +287,11 @@ export function processData(rawData, selectedMonth) {
       categories,
       data: matrixData,
       profitData: matrixProfitData,
-      dealData: matrixDealData,
+      salesData: matrixSalesData,
       agentGroupData,
     },
     groupAchieved,
-    dealLedger: deals.sort((a, b) => b.profit - a.profit),
+    salesLedger: deals.sort((a, b) => b.profit - a.profit),
     months,
     categories,
   };

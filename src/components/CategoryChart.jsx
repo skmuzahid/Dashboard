@@ -27,7 +27,7 @@ function CustomTooltip({ active, payload }) {
       <p className="text-gray-300">Revenue: AED {fmt(d.revenue)}</p>
       <p className="text-gray-300">Profit: AED {fmt(d.profit)}</p>
       <p className="text-gray-300">Margin: {d.margin}%</p>
-      <p className="text-gray-300">Deals: {d.count}</p>
+      <p className="text-gray-300">Sales: {d.count}</p>
     </div>
   );
 }
