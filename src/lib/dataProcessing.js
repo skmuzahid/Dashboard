@@ -19,6 +19,21 @@ function displayCategory(cat) {
   return CATEGORY_DISPLAY[cat] || cat;
 }
 
+/* Convert raw month values to "Month - YYYY" format */
+const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+function normalizeMonth(raw) {
+  if (!raw || !String(raw).trim()) return "";
+  const s = String(raw).trim();
+  /* Already in "Month - YYYY" format? */
+  if (/^[A-Za-z]+ - \d{4}$/.test(s)) return s;
+  /* Try parsing as a date */
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) {
+    return `${MONTH_NAMES[d.getMonth()]} - ${d.getFullYear()}`;
+  }
+  return s;
+}
+
 const CATEGORY_COLORS = {
   "HW Plus": "#8b5cf6",
   "HW to Fiber": "#10b981",
@@ -38,6 +53,19 @@ const CHART_PURPLES = [
   "#818cf8", "#5b21b6",
 ];
 
+/* ─── Category Group definitions ─── */
+const CATEGORY_GROUPS = {
+  P2P: ["P2P", "MNP", "New Sim"],
+  HomeWireless: ["HW Plus", "HW Entertainment", "HW Gaming"],
+  InzoneFiber: ["HW to Fiber", "Fiber New"],
+};
+
+const GROUP_LABELS = {
+  P2P: "P2P",
+  HomeWireless: "Home Wireless",
+  InzoneFiber: "Inzone Fiber",
+};
+
 /* ─── main processor ─── */
 export function processData(rawData, selectedMonth) {
   /* keep only rows with a month AND "Activated" status */
@@ -48,10 +76,11 @@ export function processData(rawData, selectedMonth) {
       row["Activation Status"] === "Activated"
   );
 
-  /* unique months (in order of appearance) */
+  /* unique months (in order of appearance, normalized) */
   const monthSet = new Set();
   rawData.forEach((r) => {
-    if (r.Month && r.Month.trim()) monthSet.add(r.Month.trim());
+    const m = normalizeMonth(r.Month);
+    if (m) monthSet.add(m);
   });
   const months = [...monthSet];
 
@@ -59,11 +88,11 @@ export function processData(rawData, selectedMonth) {
   const filtered =
     selectedMonth === "All"
       ? data
-      : data.filter((row) => row.Month.trim() === selectedMonth);
+      : data.filter((row) => normalizeMonth(row.Month) === selectedMonth);
 
   /* build deal objects */
   const deals = filtered.map((row) => ({
-    month: row.Month,
+    month: normalizeMonth(row.Month),
     date: row["Activation Date"] || "",
     agent: normalizeAgent(row["Agent name"]),
     category: displayCategory(row.category || "Unknown"),
@@ -144,20 +173,89 @@ export function processData(rawData, selectedMonth) {
     color: c.color,
   }));
 
-  /* ─── Agent × Category matrix ─── */
+  /* ─── Agent × Category matrix (REVENUE instead of profit) ─── */
   const categories = [...new Set(deals.map((d) => d.category))].sort();
   const matrixData = {};
+  const matrixProfitData = {};
   deals.forEach((d) => {
     if (!matrixData[d.agent]) matrixData[d.agent] = {};
-    if (!matrixData[d.agent][d.category])
-      matrixData[d.agent][d.category] = 0;
-    matrixData[d.agent][d.category] += d.profit;
+    if (!matrixData[d.agent][d.category]) matrixData[d.agent][d.category] = 0;
+    matrixData[d.agent][d.category] += d.revenue;
+
+    if (!matrixProfitData[d.agent]) matrixProfitData[d.agent] = {};
+    if (!matrixProfitData[d.agent][d.category]) matrixProfitData[d.agent][d.category] = 0;
+    matrixProfitData[d.agent][d.category] += d.profit;
   });
   Object.keys(matrixData).forEach((agent) => {
     Object.keys(matrixData[agent]).forEach((cat) => {
       matrixData[agent][cat] = Math.round(matrixData[agent][cat]);
     });
   });
+  Object.keys(matrixProfitData).forEach((agent) => {
+    Object.keys(matrixProfitData[agent]).forEach((cat) => {
+      matrixProfitData[agent][cat] = Math.round(matrixProfitData[agent][cat]);
+    });
+  });
+
+  /* ─── Agent deal counts per category ─── */
+  const matrixDealData = {};
+  deals.forEach((d) => {
+    if (!matrixDealData[d.agent]) matrixDealData[d.agent] = {};
+    if (!matrixDealData[d.agent][d.category]) matrixDealData[d.agent][d.category] = 0;
+    matrixDealData[d.agent][d.category]++;
+  });
+
+  /* ─── Category Group aggregation from deals ─── */
+  const groupAchieved = {};
+  Object.entries(CATEGORY_GROUPS).forEach(([groupKey, cats]) => {
+    let groupDeals = 0;
+    let groupRevenue = 0;
+    let groupProfit = 0;
+    const subCategories = {};
+    cats.forEach((cat) => {
+      const catData = categoryMap[cat];
+      if (catData) {
+        groupDeals += catData.count;
+        groupRevenue += catData.revenue;
+        groupProfit += catData.profit;
+        subCategories[cat] = {
+          deals: catData.count,
+          revenue: Math.round(catData.revenue),
+          profit: Math.round(catData.profit),
+        };
+      }
+    });
+    groupAchieved[groupKey] = {
+      label: GROUP_LABELS[groupKey],
+      deals: groupDeals,
+      revenue: Math.round(groupRevenue),
+      profit: Math.round(groupProfit),
+      subCategories,
+    };
+  });
+
+  /* ─── Per-agent group aggregation (for matrix hover) ─── */
+  const agentGroupData = {};
+  agentLeaderboard.forEach((a) => {
+    agentGroupData[a.name] = {};
+    Object.entries(CATEGORY_GROUPS).forEach(([groupKey, cats]) => {
+      let gDeals = 0, gRevenue = 0, gProfit = 0;
+      cats.forEach((cat) => {
+        gDeals += matrixDealData[a.name]?.[cat] || 0;
+        gRevenue += matrixData[a.name]?.[cat] || 0;
+        gProfit += matrixProfitData[a.name]?.[cat] || 0;
+      });
+      agentGroupData[a.name][groupKey] = {
+        label: GROUP_LABELS[groupKey],
+        deals: gDeals,
+        revenue: gRevenue,
+        profit: gProfit,
+      };
+    });
+  });
+
+  /* Sort agents by total revenue for matrix */
+  const agentsByRevenue = [...agentLeaderboard].sort((a, b) => b.revenue - a.revenue);
 
   const uniqueAgents = new Set(deals.map((d) => d.agent)).size;
 
@@ -182,10 +280,14 @@ export function processData(rawData, selectedMonth) {
     revenueMix,
     agentLeaderboard,
     agentCategoryMatrix: {
-      agents: agentLeaderboard.map((a) => a.name),
+      agents: agentsByRevenue.map((a) => a.name),
       categories,
       data: matrixData,
+      profitData: matrixProfitData,
+      dealData: matrixDealData,
+      agentGroupData,
     },
+    groupAchieved,
     dealLedger: deals.sort((a, b) => b.profit - a.profit),
     months,
     categories,

@@ -1,10 +1,9 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { signOut } from "next-auth/react";
 import KPICards from "./KPICards";
 import CategoryChart from "./CategoryChart";
-import RevenueMix from "./RevenueMix";
-import AgentLeaderboard from "./AgentLeaderboard";
+import TargetAchievement from "./TargetAchievement";
 import AgentCategoryMatrix from "./AgentCategoryMatrix";
 import DealLedger from "./DealLedger";
 import { processData } from "@/lib/dataProcessing";
@@ -90,6 +89,36 @@ export default function Dashboard({ user }) {
 
   const months = data?.months || [];
 
+  /* Parse targets from env var */
+  const targets = useMemo(() => {
+    try {
+      return JSON.parse(process.env.NEXT_PUBLIC_TARGETS || "{}");
+    } catch { return {}; }
+  }, []);
+
+  /* Derive latest 2 months for quick tabs */
+  const latestMonths = useMemo(() => {
+    if (months.length === 0) return [];
+    /* Sort months chronologically (format "Month - YYYY") */
+    const sorted = [...months].sort((a, b) => {
+      const parse = (m) => {
+        const [monthName, year] = m.split(" - ");
+        return new Date(`${monthName} 1, ${year}`);
+      };
+      return parse(b) - parse(a);
+    });
+    return sorted.slice(0, 2).reverse();
+  }, [months]);
+
+  /* Month dropdown open state */
+  const [monthDropdownOpen, setMonthDropdownOpen] = useState(false);
+
+  /* Format month for display: "March - 2026" → "Mar'26" */
+  const shortMonth = (m) => {
+    const [name, year] = m.split(" - ");
+    return `${name.slice(0, 3)}'${year?.slice(2) || ""}`;
+  };
+
   return (
     <div className="min-h-screen bg-gray-950">
       {/* ─── Header ─── */}
@@ -98,10 +127,10 @@ export default function Dashboard({ user }) {
           <div className="flex flex-wrap items-center gap-2">
             {/* Brand */}
             <span className="inline-flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium px-3 py-1 rounded-full">
-              ✦ Zavis · Consumer Sales
+              ✦ Dark Blue · Consumer Sales
             </span>
 
-            {/* Month pills */}
+            {/* Quick tabs: All + latest 2 months */}
             <div className="flex items-center gap-1 ml-2">
               <button
                 onClick={() => setSelectedMonth("All")}
@@ -113,7 +142,7 @@ export default function Dashboard({ user }) {
               >
                 All
               </button>
-              {months.map((m) => (
+              {latestMonths.map((m) => (
                 <button
                   key={m}
                   onClick={() => setSelectedMonth(m)}
@@ -123,13 +152,68 @@ export default function Dashboard({ user }) {
                       : "text-gray-400 hover:text-white hover:bg-gray-800"
                   }`}
                 >
-                  {m}
+                  {shortMonth(m)}
                 </button>
               ))}
             </div>
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Month calendar dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setMonthDropdownOpen((p) => !p)}
+                className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-xs text-gray-300 hover:bg-gray-700 transition-colors flex items-center gap-1.5"
+              >
+                <span>📅</span>
+                {selectedMonth === "All" ? "All Months" : shortMonth(selectedMonth)}
+                <span className="text-[10px] ml-0.5">▾</span>
+              </button>
+              {monthDropdownOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setMonthDropdownOpen(false)} />
+                  <div className="absolute right-0 top-full mt-1 z-50 bg-gray-800 border border-gray-700 rounded-xl shadow-xl p-3 min-w-[180px]">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold mb-2 px-1">Select Month</p>
+                    <button
+                      onClick={() => { setSelectedMonth("All"); setMonthDropdownOpen(false); }}
+                      className={`w-full text-left px-3 py-1.5 text-xs rounded-lg mb-0.5 transition-colors ${
+                        selectedMonth === "All" ? "bg-emerald-500/20 text-emerald-400" : "text-gray-300 hover:bg-gray-700"
+                      }`}
+                    >
+                      All Months
+                    </button>
+                    {(() => {
+                      /* Group months by year */
+                      const byYear = {};
+                      months.forEach((m) => {
+                        const [, year] = m.split(" - ");
+                        if (!byYear[year]) byYear[year] = [];
+                        byYear[year].push(m);
+                      });
+                      return Object.entries(byYear).sort(([a],[b]) => b - a).map(([year, yMonths]) => (
+                        <div key={year}>
+                          <p className="text-[10px] text-gray-500 font-semibold mt-2 mb-1 px-1">{year}</p>
+                          <div className="grid grid-cols-3 gap-1">
+                            {yMonths.map((m) => (
+                              <button
+                                key={m}
+                                onClick={() => { setSelectedMonth(m); setMonthDropdownOpen(false); }}
+                                className={`px-2 py-1.5 text-xs rounded-lg text-center transition-colors ${
+                                  selectedMonth === m ? "bg-emerald-500/20 text-emerald-400" : "text-gray-300 hover:bg-gray-700"
+                                }`}
+                              >
+                                {m.split(" - ")[0].slice(0, 3)}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </>
+              )}
+            </div>
+
             {/* Auto-refresh selector */}
             <select
               value={autoRefresh}
@@ -230,15 +314,21 @@ export default function Dashboard({ user }) {
                 <CategoryChart data={data.categoryPerformance} />
               </div>
               <div>
-                <RevenueMix data={data.revenueMix} />
+                <TargetAchievement
+                  groupAchieved={data.groupAchieved}
+                  targets={targets}
+                  selectedMonth={selectedMonth}
+                />
               </div>
             </div>
 
-            {/* Agent row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <AgentLeaderboard data={data.agentLeaderboard} />
-              <AgentCategoryMatrix data={data.agentCategoryMatrix} />
-            </div>
+            {/* Agent × Category Matrix (full width) */}
+            <AgentCategoryMatrix
+              data={data.agentCategoryMatrix}
+              targets={targets}
+              selectedMonth={selectedMonth}
+              groupAchieved={data.groupAchieved}
+            />
 
             {/* Deal ledger */}
             <DealLedger

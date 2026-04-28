@@ -1,6 +1,6 @@
 # Sales Intelligence Dashboard — Technical Documentation
 
-> **Project**: Zavis · Consumer Sales Intelligence Dashboard
+> **Project**: Dark Blue · Consumer Sales Intelligence Dashboard
 > **Stack**: Next.js 14 (App Router) · Tailwind CSS · Recharts · NextAuth.js v4 · Google Apps Script
 > **Data Source**: Google Sheets → Google Apps Script Web App → Next.js API → React UI
 > **Deployment Target**: Vercel (Free Tier)

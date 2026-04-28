@@ -127,15 +127,16 @@ export default function DealLedger({ deals, categories }) {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
+      <div className="overflow-auto" style={{ maxHeight: "480px" }}>
         <table className="w-full text-sm">
-          <thead>
+          <thead className="sticky top-0 bg-gray-900 z-10">
             <tr className="border-b border-gray-800">
               {[
                 { key: "month", label: "MONTH" },
                 { key: "agent", label: "AGENT" },
                 { key: "category", label: "CATEGORY" },
                 { key: "revenue", label: "REVENUE", align: "right" },
+                { key: "commissionAmount", label: "COMMISSION", align: "right" },
                 { key: "profit", label: "PROFIT", align: "right" },
               ].map((col) => (
                 <th
@@ -163,6 +164,9 @@ export default function DealLedger({ deals, categories }) {
                 <td className="py-3 px-3 text-right text-gray-300 tabular-nums">
                   AED {fmt(d.revenue)}
                 </td>
+                <td className="py-3 px-3 text-right text-gray-300 tabular-nums">
+                  {d.commissionAmount ? `AED ${fmt(d.commissionAmount)}` : "—"}
+                </td>
                 <td
                   className={`py-3 px-3 text-right font-semibold tabular-nums ${
                     d.profit < 0 ? "text-rose-400" : "text-emerald-400"
@@ -174,7 +178,7 @@ export default function DealLedger({ deals, categories }) {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={5} className="py-12 text-center text-gray-500">
+                <td colSpan={6} className="py-12 text-center text-gray-500">
                   No deals match your filters.
                 </td>
               </tr>

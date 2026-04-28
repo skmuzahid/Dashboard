@@ -36,7 +36,7 @@ export default function LoginForm() {
       <div className="text-center mb-8">
         <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm px-4 py-1.5 rounded-full mb-6">
           <span>✦</span>
-          <span>Zavis · Consumer Sales</span>
+          <span>Dark Blue · Consumer Sales</span>
         </div>
         <h1 className="text-3xl font-bold text-white">Sales Intelligence</h1>
         <p className="text-gray-500 mt-2">Sign in to access the dashboard</p>
