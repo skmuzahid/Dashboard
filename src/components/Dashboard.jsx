@@ -81,6 +81,20 @@ export default function Dashboard({ user }) {
     } catch { return {}; }
   }, []);
 
+  /* Operational costs per month from env var (month-keyed JSON) */
+  const operationalCosts = useMemo(() => {
+    try {
+      return JSON.parse(process.env.NEXT_PUBLIC_OPERATIONAL_COSTS || "{}");
+    } catch { return {}; }
+  }, []);
+
+  /* Agent salaries from env var */
+  const agentSalaries = useMemo(() => {
+    try {
+      return JSON.parse(process.env.NEXT_PUBLIC_AGENT_SALARIES || "{}");
+    } catch { return {}; }
+  }, []);
+
   /* Derive latest 2 months for quick tabs */
   const latestMonths = useMemo(() => {
     if (months.length === 0) return [];
@@ -109,9 +123,9 @@ export default function Dashboard({ user }) {
   /* Reprocess whenever rawData or selectedMonth changes (instant, no fetch) */
   useEffect(() => {
     if (rawData) {
-      setData(processData(rawData, resolvedMonth));
+      setData(processData(rawData, resolvedMonth, operationalCosts));
     }
-  }, [rawData, resolvedMonth]);
+  }, [rawData, resolvedMonth, operationalCosts]);
 
   /* Initial load */
   useEffect(() => {
@@ -359,6 +373,7 @@ export default function Dashboard({ user }) {
               targets={targets}
               selectedMonth={resolvedMonth}
               groupAchieved={data.groupAchieved}
+              agentSalaries={agentSalaries}
             />
 
             {/* Sales ledger */}

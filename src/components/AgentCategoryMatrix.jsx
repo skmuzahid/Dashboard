@@ -37,7 +37,7 @@ function PortalTooltip({ anchor, children }) {
   );
 }
 
-export default function AgentCategoryMatrix({ data, targets, selectedMonth, groupAchieved }) {
+export default function AgentCategoryMatrix({ data, targets, selectedMonth, groupAchieved, agentSalaries }) {
   const [hoveredAgent, setHoveredAgent] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
 
@@ -254,6 +254,19 @@ export default function AgentCategoryMatrix({ data, targets, selectedMonth, grou
                           <span className="text-gray-400">Revenue contribution</span>
                           <span className="text-amber-400 font-semibold">{revenueContrib}%</span>
                         </div>
+                        {(() => {
+                          const salary = agentSalaries?.[agent];
+                          if (!salary) return null;
+                          const isPositive = totalRev >= salary;
+                          return (
+                            <div className="flex justify-between text-xs mt-0.5">
+                              <span className="text-gray-400">Revenue vs Salary</span>
+                              <span className={`font-semibold ${isPositive ? "text-emerald-400" : "text-rose-400"}`}>
+                                {fmt(totalRev)} / {fmt(salary)}
+                              </span>
+                            </div>
+                          );
+                        })()}
                       </div>
                       </PortalTooltip>
                     )}

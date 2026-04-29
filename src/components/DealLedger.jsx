@@ -20,7 +20,8 @@ export default function DealLedger({ sales, categories }) {
         (r) =>
           r.agent.toLowerCase().includes(q) ||
           r.category.toLowerCase().includes(q) ||
-          r.ratePlan.toLowerCase().includes(q)
+          r.ratePlan.toLowerCase().includes(q) ||
+          (r.account && String(r.account).toLowerCase().includes(q))
       );
     }
 
@@ -135,6 +136,7 @@ export default function DealLedger({ sales, categories }) {
                 { key: "month", label: "MONTH" },
                 { key: "agent", label: "AGENT" },
                 { key: "category", label: "CATEGORY" },
+                { key: "account", label: "ACCOUNT" },
                 { key: "revenue", label: "REVENUE", align: "right" },
                 { key: "commissionAmount", label: "COMMISSION", align: "right" },
                 { key: "profit", label: "PROFIT", align: "right" },
@@ -161,6 +163,7 @@ export default function DealLedger({ sales, categories }) {
                 <td className="py-3 px-3 text-gray-400">{d.month}</td>
                 <td className="py-3 px-3 font-medium text-white">{d.agent}</td>
                 <td className="py-3 px-3 text-gray-400">{d.category}</td>
+                <td className="py-3 px-3 text-gray-400">{d.account}</td>
                 <td className="py-3 px-3 text-right text-gray-300 tabular-nums">
                   AED {fmt(d.revenue)}
                 </td>
@@ -178,7 +181,7 @@ export default function DealLedger({ sales, categories }) {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={6} className="py-12 text-center text-gray-500">
+                <td colSpan={7} className="py-12 text-center text-gray-500">
                   No sales match your filters.
                 </td>
               </tr>

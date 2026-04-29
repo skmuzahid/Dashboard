@@ -66,8 +66,11 @@ const GROUP_LABELS = {
   InzoneFiber: "Inzone Fiber",
 };
 
+/* ─── Freelancer agents (excluded from Top Agent KPI only) ─── */
+const FREELANCER_AGENTS = ["Zaheer", "Wshk", "Awan", "Arif", "Bomika", "Shoaib", "Parshu", "Aneel"];
+
 /* ─── main processor ─── */
-export function processData(rawData, selectedMonth) {
+export function processData(rawData, selectedMonth, operationalCosts = {}) {
   /* keep only rows with a month AND "Activated" status */
   const data = rawData.filter(
     (row) =>
@@ -118,6 +121,12 @@ export function processData(rawData, selectedMonth) {
   const lossSales = deals.filter((d) => d.profit < 0);
   const lossRevenue = Math.abs(lossSales.reduce((s, d) => s + d.profit, 0));
 
+  /* ─── Operational cost adjustment ─── */
+  const filteredMonths = [...new Set(deals.map(d => d.month))];
+  const totalOperationalCost = filteredMonths.reduce((sum, m) => sum + (Number(operationalCosts[m]) || 0), 0);
+  const adjustedProfit = totalProfit - totalOperationalCost;
+  const adjustedMargin = totalRevenue > 0 ? (adjustedProfit / totalRevenue) * 100 : 0;
+
   /* ─── Agent aggregation ─── */
   const agentMap = {};
   deals.forEach((d) => {
@@ -139,6 +148,7 @@ export function processData(rawData, selectedMonth) {
     .sort((a, b) => b.revenue - a.revenue);
 
   const topAgent = agentLeaderboard[0] || null;
+  const topAgentFullTime = agentLeaderboard.find(a => !FREELANCER_AGENTS.includes(a.name)) || null;
 
   /* ─── Category aggregation ─── */
   const categoryMap = {};
@@ -267,6 +277,9 @@ export function processData(rawData, selectedMonth) {
       revenue: Math.round(totalRevenue),
       profit: Math.round(totalProfit),
       margin: margin.toFixed(1),
+      adjustedProfit: Math.round(adjustedProfit),
+      adjustedMargin: adjustedMargin.toFixed(1),
+      operationalCost: Math.round(totalOperationalCost),
       sales: salesCount,
       lossRevenue: Math.round(lossRevenue),
       lossPercent:
@@ -275,6 +288,9 @@ export function processData(rawData, selectedMonth) {
           : "0",
       topAgent: topAgent
         ? { name: topAgent.name, revenue: topAgent.revenue, profit: topAgent.profit, sales: topAgent.sales }
+        : null,
+      topAgentFullTime: topAgentFullTime
+        ? { name: topAgentFullTime.name, revenue: topAgentFullTime.revenue, profit: topAgentFullTime.profit, sales: topAgentFullTime.sales }
         : null,
       uniqueAgents,
       categoryCount: categories.length,
