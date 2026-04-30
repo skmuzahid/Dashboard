@@ -11,6 +11,15 @@ const GROUP_COLORS = {
 
 const GROUP_ORDER = ["P2P", "HomeWireless", "InzoneFiber"];
 
+/* Gradient color tiers based on achievement percentage */
+function tierColor(percent) {
+  if (percent >= 100) return "#10b981"; // emerald green
+  if (percent >= 76) return "#84cc16";  // light green
+  if (percent >= 51) return "#f59e0b";  // amber
+  if (percent >= 26) return "#f97316";  // orange
+  return "#ef4444";                     // red
+}
+
 export default function TargetAchievement({ groupAchieved, targets, selectedMonth }) {
   const [hovered, setHovered] = useState(null); // { groupKey, type: "sales"|"revenue" }
 
@@ -78,7 +87,6 @@ export default function TargetAchievement({ groupAchieved, targets, selectedMont
               <div className="grid grid-cols-[1fr_1fr_1fr] gap-2 items-start">
                 {/* Group name */}
                 <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
                   <span className="text-white text-sm font-medium leading-tight">{achieved.label}</span>
                 </div>
 
@@ -88,8 +96,8 @@ export default function TargetAchievement({ groupAchieved, targets, selectedMont
                   onMouseEnter={() => setHovered({ groupKey: gk, type: "sales" })}
                   onMouseLeave={() => setHovered(null)}
                 >
-                  <div className="text-white text-sm font-semibold tabular-nums">
-                    {achieved.sales}
+                  <div className="text-sm font-semibold tabular-nums">
+                    <span style={{ color: tierColor(pct(achieved.sales, target.sales)) }}>{achieved.sales}</span>
                     <span className="text-gray-500 font-normal"> / {target.sales || "—"}</span>
                   </div>
                   <div className="w-full bg-gray-700 rounded-full h-1.5 mt-1">
@@ -97,11 +105,11 @@ export default function TargetAchievement({ groupAchieved, targets, selectedMont
                       className="h-1.5 rounded-full transition-all"
                       style={{
                         width: `${barWidth(achieved.sales, target.sales)}%`,
-                        backgroundColor: pct(achieved.sales, target.sales) >= 100 ? "#10b981" : color,
+                        backgroundColor: tierColor(pct(achieved.sales, target.sales)),
                       }}
                     />
                   </div>
-                  <span className={`text-[10px] font-medium ${pct(achieved.sales, target.sales) >= 100 ? "text-emerald-400" : "text-gray-400"}`}>
+                  <span className="text-[10px] font-medium" style={{ color: tierColor(pct(achieved.sales, target.sales)) }}>
                     {target.sales ? `${pct(achieved.sales, target.sales)}%` : "—"}
                   </span>
 
@@ -129,8 +137,8 @@ export default function TargetAchievement({ groupAchieved, targets, selectedMont
                   onMouseEnter={() => setHovered({ groupKey: gk, type: "revenue" })}
                   onMouseLeave={() => setHovered(null)}
                 >
-                  <div className="text-white text-sm font-semibold tabular-nums">
-                    {fmt(achieved.revenue)}
+                  <div className="text-sm font-semibold tabular-nums">
+                    <span style={{ color: tierColor(pct(achieved.revenue, target.revenue)) }}>{fmt(achieved.revenue)}</span>
                     <span className="text-gray-500 font-normal"> / {target.revenue ? fmt(target.revenue) : "—"}</span>
                   </div>
                   <div className="w-full bg-gray-700 rounded-full h-1.5 mt-1">
@@ -138,11 +146,11 @@ export default function TargetAchievement({ groupAchieved, targets, selectedMont
                       className="h-1.5 rounded-full transition-all"
                       style={{
                         width: `${barWidth(achieved.revenue, target.revenue)}%`,
-                        backgroundColor: pct(achieved.revenue, target.revenue) >= 100 ? "#10b981" : color,
+                        backgroundColor: tierColor(pct(achieved.revenue, target.revenue)),
                       }}
                     />
                   </div>
-                  <span className={`text-[10px] font-medium ${pct(achieved.revenue, target.revenue) >= 100 ? "text-emerald-400" : "text-gray-400"}`}>
+                  <span className="text-[10px] font-medium" style={{ color: tierColor(pct(achieved.revenue, target.revenue)) }}>
                     {target.revenue ? `${pct(achieved.revenue, target.revenue)}%` : "—"}
                   </span>
 
